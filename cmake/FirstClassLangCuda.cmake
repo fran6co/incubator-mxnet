@@ -29,18 +29,38 @@ endif()
 # Usage:
 #   detect_cuDNN()
 function(detect_cuDNN)
-  set(CUDNN_ROOT "" CACHE PATH "CUDNN root folder")
+  SET(CUDNN_LIBNAME "cudnn")
+  include(FindPackageHandleStandardArgs)
 
-  find_path(CUDNN_INCLUDE cudnn.h
-            PATHS ${CUDNN_ROOT} $ENV{CUDNN_ROOT}
-            DOC "Path to cuDNN include directory." )
+  if(DEFINED ENV{CUDNN_ROOT_DIR})
+    set(CUDNN_ROOT_DIR $ENV{CUDNN_ROOT_DIR} CACHE PATH "Folder contains NVIDIA cuDNN")
+  else()
+    set(CUDNN_ROOT_DIR "" CACHE PATH "Folder contains NVIDIA cuDNN")
+  endif()
 
+  if(DEFINED ENV{CUDNN_INCLUDE_DIR})
+    set(CUDNN_INCLUDE_DIR $ENV{CUDNN_INCLUDE_DIR})
+  else()
+    find_path(CUDNN_INCLUDE_DIR cudnn.h
+	  HINTS ${CUDNN_ROOT_DIR} ${CUDA_TOOLKIT_ROOT_DIR}
+	  PATH_SUFFIXES cuda/include include)
+  endif()
 
-  find_library(CUDNN_LIBRARY NAMES libcudnn.so cudnn.lib # libcudnn_static.a
-                             PATHS ${CUDNN_ROOT} $ENV{CUDNN_ROOT} ${CUDNN_INCLUDE}
-                             DOC "Path to cuDNN library.")
+  if(DEFINED ENV{CUDNN_LIBRARY})
+    set(CUDNN_LIBRARY $ENV{CUDNN_LIBRARY})
+  else()
+    find_library(CUDNN_LIBRARY ${CUDNN_LIBNAME}
+	  HINTS ${CUDNN_ROOT_DIR} ${CUDA_TOOLKIT_ROOT_DIR}
+	  PATH_SUFFIXES lib lib64 cuda/lib cuda/lib64 lib/x64)
+  endif()
 
-  if(CUDNN_INCLUDE AND CUDNN_LIBRARY)
+  find_package_handle_standard_args(
+	CUDNN DEFAULT_MSG CUDNN_INCLUDE_DIR CUDNN_LIBRARY)
+
+  if(NOT CUDNN_FOUND)
+    message(WARNING
+	  "Cannot find cuDNN library. Turning the option off")
+  else()
     set(HAVE_CUDNN  TRUE PARENT_SCOPE)
     set(CUDNN_FOUND TRUE PARENT_SCOPE)
 
